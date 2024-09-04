@@ -60,7 +60,7 @@ pub enum TrackedResource {
 
 /// Represents a runnable Starknet compiled class.
 /// Meaning, the program is runnable by the VM (or natively).
-#[derive(Clone, Debug, Eq, PartialEq, derive_more::From)]
+#[derive(Clone, Debug, Eq, PartialEq, derive_more::From, Deserialize)]
 pub enum RunnableCompiledClass {
     V0(CompiledClassV0),
     V1(CompiledClassV1),
@@ -238,6 +238,42 @@ impl Deref for CompiledClassV1 {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl<'de> Deserialize<'de> for ContractClassV1 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // Deserialize into a JSON value
+        let json_value: serde_json::Value = Deserialize::deserialize(deserializer)?;
+
+        // Convert into a JSON string
+        let json_string = serde_json::to_string(&json_value)
+            .map_err(|err| DeserializationError::custom(err.to_string()))?;
+
+        // Use try_from_json_string to deserialize into ContractClassV1
+        ContractClassV1::try_from_json_string(&json_string)
+            .map_err(|err| DeserializationError::custom(err.to_string()))
+    }
+}
+
+impl<'de> Deserialize<'de> for ContractClassV1 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // Deserialize into a JSON value
+        let json_value: serde_json::Value = Deserialize::deserialize(deserializer)?;
+
+        // Convert into a JSON string
+        let json_string = serde_json::to_string(&json_value)
+            .map_err(|err| DeserializationError::custom(err.to_string()))?;
+
+        // Use try_from_json_string to deserialize into ContractClassV1
+        ContractClassV1::try_from_json_string(&json_string)
+            .map_err(|err| DeserializationError::custom(err.to_string()))
     }
 }
 
