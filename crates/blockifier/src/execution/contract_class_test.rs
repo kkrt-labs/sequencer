@@ -45,30 +45,61 @@ fn test_get_visited_segments() {
 }
 
 #[test]
-fn test_deserialization_of_contract_class_v0() {
-    let contract_class: ContractClassV0 = serde_json::from_slice(
-        &fs::read(
-            "ERC20/ERC20_Cairo0/ERC20_without_some_syscalls/ERC20/\
-             erc20_contract_without_some_syscalls_compiled.json",
-        )
-        .unwrap(),
-    )
-    .expect("failed to deserialize contract class from file");
+fn test_deserialization_of_contract_class_v_0() {
+    let contract_class: ContractClassV0 =
+        serde_json::from_slice(&fs::read("src/execution/tests/cairo0/counter.json").unwrap())
+            .expect("failed to deserialize contract class from file");
 
     assert_eq!(
         contract_class,
-        ContractClassV0::from_file(
-            "ERC20/ERC20_Cairo0/ERC20_without_some_syscalls/ERC20/\
-             erc20_contract_without_some_syscalls_compiled.json",
-        )
+        ContractClassV0::from_file("src/execution/tests/cairo0/counter.json")
     );
+
+    // Serialize the ContractClassV0 instance to JSON
+    let serialized_contract_class =
+        serde_json::to_string_pretty(&contract_class).expect("Failed to serialize");
+
+    // Save the serialized JSON to a file
+    let output_path = std::path::Path::new("src/execution/tests/cairo0/serialized_output.json");
+    fs::write(output_path, &serialized_contract_class)
+        .expect("Failed to write serialized JSON to file");
+
+    // Re-read the serialized file for inspection
+    let serialized_json_content =
+        fs::read_to_string(output_path).expect("Failed to read serialized JSON file");
+
+    // Deserialize from the serialized string
+    let _deserialized_contract_class: ContractClassV0 =
+        serde_json::from_str(&serialized_json_content)
+            .expect("failed to deserialize contract class from serialized string");
 }
 
 #[test]
-fn test_deserialization_of_contract_class_v1() {
+fn test_deserialization_of_contract_class_v_1() {
     let contract_class: ContractClassV1 =
-        serde_json::from_slice(&fs::read("ERC20/ERC20_Cairo1/erc20.casm.json").unwrap())
+        serde_json::from_slice(&fs::read("src/execution/tests/cairo1/counter.json").unwrap())
             .expect("failed to deserialize contract class from file");
 
-    assert_eq!(contract_class, ContractClassV1::from_file("ERC20/ERC20_Cairo1/erc20.casm.json"));
+    assert_eq!(
+        contract_class,
+        ContractClassV1::from_file("src/execution/tests/cairo1/counter.json")
+    );
+
+    // Serialize the ContractClassV0 instance to JSON
+    let serialized_contract_class =
+        serde_json::to_string_pretty(&contract_class).expect("Failed to serialize");
+
+    // Save the serialized JSON to a file
+    let output_path = std::path::Path::new("src/execution/tests/cairo1/serialized_output.json");
+    fs::write(output_path, &serialized_contract_class)
+        .expect("Failed to write serialized JSON to file");
+
+    // Re-read the serialized file for inspection
+    let serialized_json_content =
+        fs::read_to_string(output_path).expect("Failed to read serialized JSON file");
+
+    // Deserialize from the serialized string
+    let _deserialized_contract_class: ContractClassV1 =
+        serde_json::from_str(&serialized_json_content)
+            .expect("failed to deserialize contract class from serialized string");
 }

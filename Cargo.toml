@@ -79,7 +79,7 @@ cairo-lang-sierra = "=2.7.0"
 cairo-lang-sierra-to-casm = "2.7.0"
 cairo-lang-starknet-classes = "2.7.0"
 cairo-lang-utils = "2.7.0"
-cairo-vm = "=1.0.1"
+cairo-vm = { version = "1.0.1", features = ["test_utils"] }
 camelpaste = "0.1.0"
 chrono = "0.4.26"
 clap = "4.5.4"
