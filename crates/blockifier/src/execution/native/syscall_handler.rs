@@ -293,7 +293,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
             chain_id: Felt::from_hex(
                 &self.execution_context.tx_context.block_context.chain_info.chain_id.as_hex(),
             )
-                .unwrap(),
+            .unwrap(),
             nonce: tx_info.nonce().0,
         };
 
@@ -361,7 +361,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
             chain_id: Felt::from_hex(
                 &self.execution_context.tx_context.block_context.chain_info.chain_id.as_hex(),
             )
-                .unwrap(),
+            .unwrap(),
             nonce: tx_info.nonce().0,
             ..default_tx_v2_info()
         };
@@ -420,7 +420,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
             &wrapper_calldata,
             deployer_address,
         )
-            .map_err(|err| encode_str_as_felts(&err.to_string()))?;
+        .map_err(|err| encode_str_as_felts(&err.to_string()))?;
 
         let ctor_context = ConstructorContext {
             class_hash,
@@ -452,7 +452,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
             // conversion issues
             u64::try_from(*remaining_gas).unwrap(),
         )
-            .map_err(|error| encode_str_as_felts(&error.to_string()))?;
+        .map_err(|error| encode_str_as_felts(&error.to_string()))?;
 
         self.update_remaining_gas(remaining_gas, &call_info);
 
@@ -640,7 +640,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
             self.execution_context.n_emitted_events + 1,
             &event,
         )
-            .map_err(|e| encode_str_as_felts(&e.to_string()))?;
+        .map_err(|e| encode_str_as_felts(&e.to_string()))?;
 
         self.events.push(OrderedEvent { order, event });
         self.execution_context.n_emitted_events += 1;
@@ -890,9 +890,9 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
         let data_as_bytes = sha2::digest::generic_array::GenericArray::from_exact_iter(
             current_block.iter().flat_map(|x| x.to_be_bytes()),
         )
-            .expect(
-                "u32.to_be_bytes() returns 4 bytes, and data.len() == 16. So data contains 64 bytes.",
-            );
+        .expect(
+            "u32.to_be_bytes() returns 4 bytes, and data.len() == 16. So data contains 64 bytes.",
+        );
         let mut state: [u32; SHA256_STATE_SIZE] = *prev_state;
         sha2::compress256(&mut state, &[data_as_bytes]);
         Ok(state)
@@ -903,10 +903,10 @@ use ark_ff::PrimeField;
 
 impl<Curve: SWCurveConfig> Secp256Point<Curve>
 where
-// It's not possible to directly constrain on
-// ark_secp256k1::Config and
-// ark_secp256r1::Config. The following
-// constraints have the same effect.
+    // It's not possible to directly constrain on
+    // ark_secp256k1::Config and
+    // ark_secp256r1::Config. The following
+    // constraints have the same effect.
     Curve::BaseField: PrimeField, // constraint for get_point_by_id
     ark_ff::BigInt<4>: From<<Curve>::BaseField>, // constraint for point to bigint
 {
