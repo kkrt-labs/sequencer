@@ -7,6 +7,7 @@ use rstest::rstest;
 
 const CAIRO0_FEATURE_CONTRACTS_DIR: &str = "feature_contracts/cairo0";
 const CAIRO1_FEATURE_CONTRACTS_DIR: &str = "feature_contracts/cairo1";
+const CAIRO_NATIVE_FEATURE_CONTRACTS_DIR: &str = "feature_contracts/cairo_native";
 const COMPILED_CONTRACTS_SUBDIR: &str = "compiled";
 const FIX_COMMAND: &str = "FIX_FEATURE_TEST=1 cargo test -p blockifier --test \
                            feature_contracts_compatibility_test --features testing -- \
@@ -63,7 +64,8 @@ fn verify_and_get_files(cairo_version: CairoVersion) -> Vec<(String, String, Str
     let mut paths = vec![];
     let directory = match cairo_version {
         CairoVersion::Cairo0 => CAIRO0_FEATURE_CONTRACTS_DIR,
-        CairoVersion::Cairo1 | CairoVersion::Native => CAIRO1_FEATURE_CONTRACTS_DIR,
+        CairoVersion::Cairo1 => CAIRO1_FEATURE_CONTRACTS_DIR,
+        CairoVersion::Native => CAIRO_NATIVE_FEATURE_CONTRACTS_DIR,
     };
     let compiled_extension = match cairo_version {
         CairoVersion::Cairo0 => "_compiled.json",
@@ -108,12 +110,14 @@ fn verify_feature_contracts_match_enum() {
     let mut compiled_paths_from_enum: Vec<String> = FeatureContract::all_feature_contracts()
         .map(|contract| contract.get_compiled_path())
         .collect();
+
     let mut compiled_paths_on_filesystem: Vec<String> = verify_and_get_files(CairoVersion::Cairo0)
         .into_iter()
         .chain(verify_and_get_files(CairoVersion::Cairo1))
         .chain(verify_and_get_files(CairoVersion::Native))
         .map(|(_, _, compiled_path)| compiled_path)
         .collect();
+
     compiled_paths_from_enum.sort();
     compiled_paths_on_filesystem.sort();
     assert_eq!(compiled_paths_from_enum, compiled_paths_on_filesystem);

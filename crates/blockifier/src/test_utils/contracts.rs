@@ -112,18 +112,39 @@ impl FeatureContract {
         }
     }
 
-    fn has_two_versions(&self) -> bool {
-        match self {
-            Self::AccountWithLongValidate(_)
-            | Self::AccountWithoutValidations(_)
-            | Self::Empty(_)
-            | Self::FaultyAccount(_)
-            | Self::TestContract(_)
-            | Self::ERC20(_) => true,
-            Self::SecurityTests
-            | Self::LegacyTestContract
-            | Self::SierraExecutionInfoV1Contract => false,
-        }
+    /// Returns a bit mask of supported Cairo versions for the feature contract.
+    ///
+    /// Each bit identifies a supported Cairo version. The least significant bit is Cairo0, the next
+    /// bit is Cairo1, and the most significant bit is the native version.
+    ///
+    /// This order is defined in [CairoVersion] enum.
+    fn supported_versions(&self) -> u32 {
+        let supports_legacy = matches!(
+            self,
+            Self::FaultyAccount(_)
+                | Self::AccountWithoutValidations(_)
+                | Self::AccountWithLongValidate(_)
+                | Self::Empty(_)
+                | Self::TestContract(_)
+                | Self::SecurityTests
+                | Self::ERC20(_)
+        );
+
+        let supports_cairo1 = matches!(
+            self,
+            Self::FaultyAccount(_)
+                | Self::AccountWithoutValidations(_)
+                | Self::AccountWithLongValidate(_)
+                | Self::Empty(_)
+                | Self::LegacyTestContract
+                | Self::TestContract(_)
+                | Self::ERC20(_)
+        );
+
+        let supports_native =
+            matches!(self, Self::SierraExecutionInfoV1Contract | Self::TestContract(_));
+
+        (supports_legacy as u32) | (supports_cairo1 as u32) << 1 | (supports_native as u32) << 2
     }
 
     pub fn set_cairo_version(&mut self, version: CairoVersion) {
@@ -195,16 +216,16 @@ impl FeatureContract {
     fn get_integer_base(self) -> u32 {
         self.get_cairo_version_bit()
             + match self {
-                Self::AccountWithLongValidate(_) => ACCOUNT_LONG_VALIDATE_BASE,
-                Self::AccountWithoutValidations(_) => ACCOUNT_WITHOUT_VALIDATIONS_BASE,
-                Self::Empty(_) => EMPTY_CONTRACT_BASE,
-                Self::ERC20(_) => ERC20_CONTRACT_BASE,
-                Self::FaultyAccount(_) => FAULTY_ACCOUNT_BASE,
-                Self::LegacyTestContract => LEGACY_CONTRACT_BASE,
-                Self::SecurityTests => SECURITY_TEST_CONTRACT_BASE,
-                Self::TestContract(_) => TEST_CONTRACT_BASE,
-                Self::SierraExecutionInfoV1Contract => SIERRA_EXECUTION_INFO_V1_CONTRACT_BASE,
-            }
+            Self::AccountWithLongValidate(_) => ACCOUNT_LONG_VALIDATE_BASE,
+            Self::AccountWithoutValidations(_) => ACCOUNT_WITHOUT_VALIDATIONS_BASE,
+            Self::Empty(_) => EMPTY_CONTRACT_BASE,
+            Self::ERC20(_) => ERC20_CONTRACT_BASE,
+            Self::FaultyAccount(_) => FAULTY_ACCOUNT_BASE,
+            Self::LegacyTestContract => LEGACY_CONTRACT_BASE,
+            Self::SecurityTests => SECURITY_TEST_CONTRACT_BASE,
+            Self::TestContract(_) => TEST_CONTRACT_BASE,
+            Self::SierraExecutionInfoV1Contract => SIERRA_EXECUTION_INFO_V1_CONTRACT_BASE,
+        }
     }
 
     fn get_non_erc20_base_name(&self) -> &str {
@@ -233,7 +254,7 @@ impl FeatureContract {
                     unreachable!("ERC20 contract is not supported in the native version.")
                 }
             }
-            .into()
+                .into()
         } else {
             format!(
                 "feature_contracts/cairo{}/{}.cairo",
@@ -256,12 +277,13 @@ impl FeatureContract {
                     unreachable!("ERC20 contract is not supported in the native version.")
                 }
             }
-            .into(),
+                .into(),
             _ => format!(
                 "feature_contracts/cairo{}/compiled/{}{}.json",
                 match self.cairo_version() {
                     CairoVersion::Cairo0 => "0",
-                    CairoVersion::Cairo1 | CairoVersion::Native => "1",
+                    CairoVersion::Cairo1 => "1",
+                    CairoVersion::Native => "_native",
                 },
                 self.get_non_erc20_base_name(),
                 match self.cairo_version() {
@@ -384,21 +406,33 @@ impl FeatureContract {
         self.get_offset(selector, EntryPointType::Constructor)
     }
 
-    pub fn all_contracts() -> impl Iterator<Item = Self> {
+    pub fn all_contracts() -> impl Iterator<Item=Self> {
         // EnumIter iterates over all variants with Default::default() as the cairo
         // version.
         Self::iter().flat_map(|contract| {
-            if contract.has_two_versions() {
-                let mut other_contract = contract;
-                other_contract.set_cairo_version(contract.cairo_version().other());
-                vec![contract, other_contract].into_iter()
-            } else {
+            // if we have only one supported version, return the contract as is.
+            if contract.supported_versions().is_power_of_two() {
                 vec![contract].into_iter()
+            } else {
+                let supported_versions = contract.supported_versions();
+
+                // if we have multiple supported versions, return the contract for each supported
+                // version.
+                (0..3isize)
+                    .filter(|i| supported_versions & (1u32 << i) != 0)
+                    .map(move |i| {
+                        let mut contract = contract;
+                        contract.set_cairo_version(CairoVersion::from(i));
+
+                        contract
+                    })
+                    .collect::<Vec<_>>()
+                    .into_iter()
             }
         })
     }
 
-    pub fn all_feature_contracts() -> impl Iterator<Item = Self> {
+    pub fn all_feature_contracts() -> impl Iterator<Item=Self> {
         // ERC20 is a special case - not in the feature_contracts directory.
         Self::all_contracts().filter(|contract| !matches!(contract, Self::ERC20(_)))
     }

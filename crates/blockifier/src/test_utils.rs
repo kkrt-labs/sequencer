@@ -67,9 +67,20 @@ pub const TEST_CONTRACT_SIERRA_PATH: &str =
 // error.
 #[derive(Clone, Hash, PartialEq, Eq, Copy, Debug)]
 pub enum CairoVersion {
-    Cairo0,
-    Cairo1,
-    Native,
+    Cairo0 = 0,
+    Cairo1 = 1,
+    Native = 2,
+}
+
+impl From<isize> for CairoVersion {
+    fn from(value: isize) -> Self {
+        match value {
+            0 => Self::Cairo0,
+            1 => Self::Cairo1,
+            2 => Self::Native,
+            _ => panic!("Invalid value for CairoVersion: {}", value),
+        }
+    }
 }
 
 impl Default for CairoVersion {
@@ -235,7 +246,7 @@ pub fn default_testing_resource_bounds() -> DeprecatedResourceBoundsMapping {
         //   L2 gas.
         (Resource::L2Gas, ResourceBounds { max_amount: 0, max_price_per_unit: 0 }),
     ])
-    .unwrap()
+        .unwrap()
 }
 
 #[macro_export]
@@ -403,8 +414,8 @@ pub fn calldata_for_deploy_test(
             constructor_calldata.into(),
             vec![felt!(if valid_deploy_from_zero { 0_u8 } else { 2_u8 })],
         ]
-        .concat()
-        .into(),
+            .concat()
+            .into(),
     )
 }
 
@@ -433,8 +444,8 @@ pub fn create_calldata(
             ],
             entry_point_args.into(),
         ]
-        .concat()
-        .into(),
+            .concat()
+            .into(),
     )
 }
 
