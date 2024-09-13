@@ -1,5 +1,6 @@
 // run with:
 // cargo test --test erc20_tests --features testing
+use blockifier::execution::native::test_utils::*;
 use blockifier::execution::native::utils::contract_address_to_native_felt;
 use blockifier::test_utils::*;
 use starknet_types_core::felt::Felt;

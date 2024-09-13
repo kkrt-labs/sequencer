@@ -5,38 +5,71 @@ use std::sync::Arc;
 
 use ark_ec::short_weierstrass::{Affine, Projective, SWCurveConfig};
 use cairo_native::starknet::{
-    BlockInfo, ExecutionInfo, ExecutionInfoV2, Secp256k1Point, Secp256r1Point,
-    StarknetSyscallHandler, SyscallResult, TxInfo, TxV2Info, U256,
+    BlockInfo,
+    ExecutionInfo,
+    ExecutionInfoV2,
+    Secp256k1Point,
+    Secp256r1Point,
+    StarknetSyscallHandler,
+    SyscallResult,
+    TxInfo,
+    TxV2Info,
+    U256,
 };
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use num_traits::{ToPrimitive, Zero};
 use starknet_api::core::{
-    calculate_contract_address, ClassHash, ContractAddress, EntryPointSelector, EthAddress,
+    calculate_contract_address,
+    ClassHash,
+    ContractAddress,
+    EntryPointSelector,
+    EthAddress,
     PatriciaKey,
 };
 use starknet_api::data_availability::DataAvailabilityMode;
 use starknet_api::deprecated_contract_class::EntryPointType;
 use starknet_api::state::StorageKey;
 use starknet_api::transaction::{
-    Calldata, ContractAddressSalt, EventContent, EventData, EventKey, L2ToL1Payload,
+    Calldata,
+    ContractAddressSalt,
+    EventContent,
+    EventData,
+    EventKey,
+    L2ToL1Payload,
 };
 use starknet_types_core::felt::Felt;
 
 use super::utils::{
-    big4int_to_u256, calculate_resource_bounds, contract_address_to_native_felt,
-    default_tx_v2_info, encode_str_as_felts, u256_to_biguint,
+    big4int_to_u256,
+    calculate_resource_bounds,
+    contract_address_to_native_felt,
+    default_tx_v2_info,
+    encode_str_as_felts,
+    u256_to_biguint,
 };
 use crate::abi::constants;
-use crate::execution::call_info::{CallInfo, MessageToL1, OrderedEvent, OrderedL2ToL1Message};
+use crate::execution::call_info::{
+    CallInfo,
+    MessageToL1,
+    OrderedEvent,
+    OrderedL2ToL1Message,
+    Retdata,
+};
 use crate::execution::common_hints::ExecutionMode;
 use crate::execution::contract_class::ContractClass;
 use crate::execution::entry_point::{
-    CallEntryPoint, CallType, ConstructorContext, EntryPointExecutionContext,
+    CallEntryPoint,
+    CallType,
+    ConstructorContext,
+    EntryPointExecutionContext,
 };
 use crate::execution::execution_utils::{execute_deployment, max_fee_for_execution_info};
 use crate::execution::syscalls::hint_processor::{
-    SyscallCounter, SyscallExecutionError, BLOCK_NUMBER_OUT_OF_RANGE_ERROR,
-    INVALID_INPUT_LENGTH_ERROR, OUT_OF_GAS_ERROR,
+    SyscallCounter,
+    SyscallExecutionError,
+    BLOCK_NUMBER_OUT_OF_RANGE_ERROR,
+    INVALID_INPUT_LENGTH_ERROR,
+    OUT_OF_GAS_ERROR,
 };
 use crate::execution::syscalls::{exceeds_event_size_limit, SyscallSelector};
 use crate::state::state_api::State;
@@ -93,7 +126,7 @@ impl<'state> NativeSyscallHandler<'state> {
         &mut self,
         entry_point: CallEntryPoint,
         remaining_gas: &mut u128,
-    ) -> SyscallResult<CallInfo> {
+    ) -> SyscallResult<Retdata> {
         let call_info = entry_point
             .execute(self.state, self.execution_resources, self.execution_context)
             .map_err(|e| encode_str_as_felts(&e.to_string()))?;
@@ -106,9 +139,11 @@ impl<'state> NativeSyscallHandler<'state> {
 
         self.update_remaining_gas(remaining_gas, &call_info);
 
-        self.inner_calls.push(call_info.clone());
+        let retdata = call_info.execution.retdata.clone();
 
-        Ok(call_info)
+        self.inner_calls.push(call_info);
+
+        Ok(retdata)
     }
 
     pub fn update_remaining_gas(&mut self, remaining_gas: &mut u128, call_info: &CallInfo) {
@@ -258,7 +293,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
             chain_id: Felt::from_hex(
                 &self.execution_context.tx_context.block_context.chain_info.chain_id.as_hex(),
             )
-            .unwrap(),
+                .unwrap(),
             nonce: tx_info.nonce().0,
         };
 
@@ -326,7 +361,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
             chain_id: Felt::from_hex(
                 &self.execution_context.tx_context.block_context.chain_info.chain_id.as_hex(),
             )
-            .unwrap(),
+                .unwrap(),
             nonce: tx_info.nonce().0,
             ..default_tx_v2_info()
         };
@@ -385,7 +420,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
             &wrapper_calldata,
             deployer_address,
         )
-        .map_err(|err| encode_str_as_felts(&err.to_string()))?;
+            .map_err(|err| encode_str_as_felts(&err.to_string()))?;
 
         let ctor_context = ConstructorContext {
             class_hash,
@@ -417,7 +452,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
             // conversion issues
             u64::try_from(*remaining_gas).unwrap(),
         )
-        .map_err(|error| encode_str_as_felts(&error.to_string()))?;
+            .map_err(|error| encode_str_as_felts(&error.to_string()))?;
 
         self.update_remaining_gas(remaining_gas, &call_info);
 
@@ -486,11 +521,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
             initial_gas: u64::try_from(*remaining_gas).unwrap(),
         };
 
-        let retdata = self
-            .execute_inner_call(entry_point, remaining_gas)
-            .map(|call_info| call_info.execution.retdata.0.clone())?;
-
-        Ok(retdata)
+        Ok(self.execute_inner_call(entry_point, remaining_gas)?.0)
     }
 
     fn call_contract(
@@ -534,11 +565,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
             initial_gas: u64::try_from(*remaining_gas).unwrap(),
         };
 
-        let retdata = self
-            .execute_inner_call(entry_point, remaining_gas)
-            .map(|call_info| call_info.execution.retdata.0.clone())?;
-
-        Ok(retdata)
+        Ok(self.execute_inner_call(entry_point, remaining_gas)?.0)
     }
 
     fn storage_read(
@@ -613,7 +640,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
             self.execution_context.n_emitted_events + 1,
             &event,
         )
-        .map_err(|e| encode_str_as_felts(&e.to_string()))?;
+            .map_err(|e| encode_str_as_felts(&e.to_string()))?;
 
         self.events.push(OrderedEvent { order, event });
         self.execution_context.n_emitted_events += 1;
@@ -863,9 +890,9 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
         let data_as_bytes = sha2::digest::generic_array::GenericArray::from_exact_iter(
             current_block.iter().flat_map(|x| x.to_be_bytes()),
         )
-        .expect(
-            "u32.to_be_bytes() returns 4 bytes, and data.len() == 16. So data contains 64 bytes.",
-        );
+            .expect(
+                "u32.to_be_bytes() returns 4 bytes, and data.len() == 16. So data contains 64 bytes.",
+            );
         let mut state: [u32; SHA256_STATE_SIZE] = *prev_state;
         sha2::compress256(&mut state, &[data_as_bytes]);
         Ok(state)
@@ -876,10 +903,10 @@ use ark_ff::PrimeField;
 
 impl<Curve: SWCurveConfig> Secp256Point<Curve>
 where
-    // It's not possible to directly constrain on
-    // ark_secp256k1::Config and
-    // ark_secp256r1::Config. The following
-    // constraints have the same effect.
+// It's not possible to directly constrain on
+// ark_secp256k1::Config and
+// ark_secp256r1::Config. The following
+// constraints have the same effect.
     Curve::BaseField: PrimeField, // constraint for get_point_by_id
     ark_ff::BigInt<4>: From<<Curve>::BaseField>, // constraint for point to bigint
 {
