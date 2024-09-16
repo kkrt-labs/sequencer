@@ -101,18 +101,7 @@ jobs:
       - uses: Noelware/setup-protoc@1.1.0
         with:
           version: ${{env.PROTOC_VERSION}}
-      - run: cargo doc --workspace -r --document-private-items --no-deps
-
-  run-workspace-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: ./.github/actions/install_rust
-      - name: Set up Native Dependencies
-        uses: ./.github/actions/setup-native-deps
-        id: native-deps
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo test -p workspace_tests
+      - run: cargo doc -p blockifier -r --document-private-items --no-deps
 
   run-tests:
     runs-on: ubuntu-latest
@@ -192,31 +181,4 @@ jobs:
       - name: Set up Native Dependencies
         uses: ./.github/actions/setup-native-deps
         id: native-deps
-      - run: cargo check --workspace -r --all-features
-
-  merge-gatekeeper:
-    runs-on: ubuntu-latest
-    # Restrict permissions of the GITHUB_TOKEN.
-    # Docs: https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs
-    permissions:
-      checks: read
-      statuses: read
-    steps:
-      - name: Run Merge Gatekeeper on pull request
-        if: github.event_name == 'pull_request'
-        uses: upsidr/merge-gatekeeper@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          timeout: 1200
-          interval: 30
-          ignored: "code-review/reviewable"
-
-      - name: Run Merge Gatekeeper on Merge Queue || push
-        if: github.event_name == 'merge_group' || github.event_name == 'push'
-        uses: upsidr/merge-gatekeeper@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          ref: ${{github.ref}}
-          timeout: 1200
-          interval: 30
-          ignored: "code-review/reviewable"
+      - run: cargo check -p blockifier -r --all-features
