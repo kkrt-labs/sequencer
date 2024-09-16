@@ -17,8 +17,8 @@ use papyrus_config::presentation::get_config_presentation;
 use papyrus_config::validators::config_validate;
 use papyrus_config::ConfigError;
 use papyrus_consensus::config::ConsensusConfig;
-use papyrus_consensus::papyrus_consensus_context::PapyrusConsensusContext;
 use papyrus_consensus::types::ConsensusError;
+use papyrus_consensus_orchestrator::papyrus_consensus_context::PapyrusConsensusContext;
 use papyrus_monitoring_gateway::MonitoringServer;
 use papyrus_network::gossipsub_impl::Topic;
 use papyrus_network::network_manager::{BroadcastTopicChannels, NetworkManager};
@@ -357,10 +357,13 @@ fn register_to_network(network_config: Option<NetworkConfig>) -> anyhow::Result<
         network_manager.register_sqmr_protocol_client(Protocol::StateDiff.into(), BUFFER_SIZE);
     let transaction_client_sender =
         network_manager.register_sqmr_protocol_client(Protocol::Transaction.into(), BUFFER_SIZE);
+    let class_client_sender =
+        network_manager.register_sqmr_protocol_client(Protocol::Class.into(), BUFFER_SIZE);
     let p2p_sync_client_channels = P2PSyncClientChannels::new(
         header_client_sender,
         state_diff_client_sender,
         transaction_client_sender,
+        class_client_sender,
     );
 
     let header_server_receiver = network_manager
