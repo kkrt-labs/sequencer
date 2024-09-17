@@ -87,3 +87,5 @@ required-features = ["testing"]
 [[test]]
 name = "test_native_contract"
 path = "tests/test_native_contract.rs"
+required-features = ["testing"]
+
