@@ -246,7 +246,7 @@ pub fn default_testing_resource_bounds() -> DeprecatedResourceBoundsMapping {
         //   L2 gas.
         (Resource::L2Gas, ResourceBounds { max_amount: 0, max_price_per_unit: 0 }),
     ])
-        .unwrap()
+    .unwrap()
 }
 
 #[macro_export]
@@ -414,8 +414,8 @@ pub fn calldata_for_deploy_test(
             constructor_calldata.into(),
             vec![felt!(if valid_deploy_from_zero { 0_u8 } else { 2_u8 })],
         ]
-            .concat()
-            .into(),
+        .concat()
+        .into(),
     )
 }
 
@@ -444,8 +444,8 @@ pub fn create_calldata(
             ],
             entry_point_args.into(),
         ]
-            .concat()
-            .into(),
+        .concat()
+        .into(),
     )
 }
 
