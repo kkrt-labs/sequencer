@@ -7,14 +7,18 @@ use cairo_lang_casm::hints::Hint;
 use cairo_lang_sierra::ids::FunctionId;
 use cairo_lang_starknet_classes::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
 use cairo_lang_starknet_classes::contract_class::{
-    ContractClass as SierraContractClass, ContractEntryPoint,
+    ContractClass as SierraContractClass,
+    ContractEntryPoint,
     ContractEntryPoints as SierraContractEntryPoints,
 };
 use cairo_lang_starknet_classes::NestedIntList;
 use cairo_lang_utils::bigint::BigUintAsHex;
 use cairo_native::executor::AotNativeExecutor;
 use cairo_vm::serde::deserialize_program::{
-    ApTracking, FlowTrackingData, HintParams, ReferenceManager,
+    ApTracking,
+    FlowTrackingData,
+    HintParams,
+    ReferenceManager,
 };
 use cairo_vm::types::builtin_name::BuiltinName;
 use cairo_vm::types::errors::program_errors::ProgramError;
@@ -24,10 +28,12 @@ use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use itertools::Itertools;
 use serde::de::Error as DeserializationError;
 use serde::{Deserialize, Deserializer};
-use starknet_api::block::BlockHash;
 use starknet_api::core::EntryPointSelector;
 use starknet_api::deprecated_contract_class::{
-    ContractClass as DeprecatedContractClass, EntryPoint, EntryPointOffset, EntryPointType,
+    ContractClass as DeprecatedContractClass,
+    EntryPoint,
+    EntryPointOffset,
+    EntryPointType,
     Program as DeprecatedProgram,
 };
 use starknet_types_core::felt::Felt;
@@ -149,7 +155,7 @@ impl ContractClassV0 {
             + self.n_builtins()
             + self.bytecode_length()
             + 1; // Hinted class hash.
-                 // The hashed data size is approximately the number of hashes (invoked in hash chains).
+        // The hashed data size is approximately the number of hashes (invoked in hash chains).
         let n_steps = constants::N_STEPS_PER_PEDERSEN * hashed_data_size;
 
         ExecutionResources {
@@ -625,7 +631,7 @@ pub struct NativeContractClassV1Inner {
     pub executor: AotNativeExecutor,
     entry_points_by_type: NativeContractEntryPoints,
     // Used for PartialEq
-    sierra_program_hash: BlockHash,
+    sierra_program_hash: starknet_api::hash::StarkHash,
 }
 
 impl NativeContractClassV1Inner {
@@ -663,10 +669,10 @@ impl NativeContractClassV1Inner {
     }
 }
 
-fn calculate_sierra_program_hash(sierra: Vec<BigUintAsHex>) -> BlockHash {
+fn calculate_sierra_program_hash(sierra: Vec<BigUintAsHex>) -> starknet_api::hash::StarkHash {
     let sierra_felts: Vec<Felt> =
         sierra.iter().map(|big_uint| &big_uint.value).map_into().collect();
-    BlockHash(Poseidon::hash_array(&sierra_felts))
+    Poseidon::hash_array(&sierra_felts)
 }
 
 // The location where the compiled contract is loaded into memory will not
