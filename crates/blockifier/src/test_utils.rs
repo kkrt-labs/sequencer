@@ -67,9 +67,20 @@ pub const TEST_CONTRACT_SIERRA_PATH: &str =
 // error.
 #[derive(Clone, Hash, PartialEq, Eq, Copy, Debug)]
 pub enum CairoVersion {
-    Cairo0,
-    Cairo1,
-    Native,
+    Cairo0 = 0,
+    Cairo1 = 1,
+    Native = 2,
+}
+
+impl From<isize> for CairoVersion {
+    fn from(value: isize) -> Self {
+        match value {
+            0 => Self::Cairo0,
+            1 => Self::Cairo1,
+            2 => Self::Native,
+            _ => panic!("Invalid value for CairoVersion: {}", value),
+        }
+    }
 }
 
 impl Default for CairoVersion {

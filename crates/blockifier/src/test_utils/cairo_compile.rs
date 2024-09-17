@@ -4,6 +4,7 @@ use std::process::{Command, Output};
 use std::{env, fs};
 
 use cached::proc_macro::cached;
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 
@@ -146,6 +147,7 @@ pub fn sierra_compile(
     cargo_nightly_arg: Option<String>,
 ) -> Vec<u8> {
     prepare_cairo1_compiler_deps(git_tag_override);
+
     let cairo1_compiler_path = local_cairo1_compiler_repo_path();
 
     // Command args common to both compilation phases.
@@ -199,7 +201,24 @@ fn verify_cairo0_compiler_deps() {
     );
 }
 
+// We should do it in that way, to avoid multithreading when running tests, so we don't have
+// conflicts with `.git/index.lock`.
+//
+// Reference of the error:
+// fatal: Unable to create '/cairo/.git/index.lock': File exists.
+//
+// Another git process seems to be running in this repository, e.g.
+// an editor opened by 'git commit'. Please make sure all processes
+// are terminated then try again. If it still fails, a git process
+// may have crashed in this repository earlier:
+// remove the file manually to continue.
+lazy_static! {
+    static ref PREPARING_CAIRO1_COMPILER_DEPS: std::sync::Mutex<()> = std::sync::Mutex::default();
+}
+
 fn prepare_cairo1_compiler_deps(git_tag_override: Option<String>) {
+    let _preparing = PREPARING_CAIRO1_COMPILER_DEPS.lock().unwrap();
+
     let cairo_repo_path = local_cairo1_compiler_repo_path();
     let tag = git_tag_override.unwrap_or(cairo1_compiler_tag());
 
