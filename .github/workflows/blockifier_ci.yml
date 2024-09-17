@@ -39,13 +39,13 @@ concurrency:
 
 jobs:
   featureless-build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/install_rust
       - uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: "v0-rust-ubuntu-20.04"
+          prefix-key: "v0-rust-ubuntu-latest"
       - name: Set up Native Dependencies
         uses: ./.github/actions/setup-native-deps
         id: native-deps
