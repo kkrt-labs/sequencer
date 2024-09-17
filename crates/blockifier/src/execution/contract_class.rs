@@ -28,7 +28,6 @@ use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use itertools::Itertools;
 use serde::de::Error as DeserializationError;
 use serde::{Deserialize, Deserializer};
-use starknet_api::block::BlockHash;
 use starknet_api::core::EntryPointSelector;
 use starknet_api::deprecated_contract_class::{
     ContractClass as DeprecatedContractClass,
@@ -632,7 +631,7 @@ pub struct NativeContractClassV1Inner {
     pub executor: AotNativeExecutor,
     entry_points_by_type: NativeContractEntryPoints,
     // Used for PartialEq
-    sierra_program_hash: BlockHash,
+    sierra_program_hash: starknet_api::hash::StarkHash,
 }
 
 impl NativeContractClassV1Inner {
@@ -670,10 +669,10 @@ impl NativeContractClassV1Inner {
     }
 }
 
-fn calculate_sierra_program_hash(sierra: Vec<BigUintAsHex>) -> BlockHash {
+fn calculate_sierra_program_hash(sierra: Vec<BigUintAsHex>) -> starknet_api::hash::StarkHash {
     let sierra_felts: Vec<Felt> =
         sierra.iter().map(|big_uint| &big_uint.value).map_into().collect();
-    BlockHash(Poseidon::hash_array(&sierra_felts))
+    Poseidon::hash_array(&sierra_felts)
 }
 
 // The location where the compiled contract is loaded into memory will not

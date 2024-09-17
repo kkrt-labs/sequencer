@@ -58,6 +58,8 @@ const SECURITY_TEST_CONTRACT_BASE: u32 = 6 * CLASS_HASH_BASE;
 const TEST_CONTRACT_BASE: u32 = 7 * CLASS_HASH_BASE;
 const ERC20_CONTRACT_BASE: u32 = 8 * CLASS_HASH_BASE;
 const SIERRA_EXECUTION_INFO_V1_CONTRACT_BASE: u32 = 10 * CLASS_HASH_BASE;
+const TEST_CONTRACT_ENTRY_POINT_A_BASE: u32 = 11 * CLASS_HASH_BASE;
+const TEST_CONTRACT_ENTRY_POINT_B_BASE: u32 = 12 * CLASS_HASH_BASE;
 
 // Contract names.
 const ACCOUNT_LONG_VALIDATE_NAME: &str = "account_with_long_validate";
@@ -68,6 +70,8 @@ const LEGACY_CONTRACT_NAME: &str = "legacy_test_contract";
 const SECURITY_TEST_CONTRACT_NAME: &str = "security_tests_contract";
 const TEST_CONTRACT_NAME: &str = "test_contract";
 const EXECUTION_INFO_V1_CONTRACT_NAME: &str = "test_contract_execution_info_v1";
+const TEST_CONTRACT_ENTRY_POINT_A_NAME: &str = "test_contract_entrypoint_a";
+const TEST_CONTRACT_ENTRY_POINT_B_NAME: &str = "test_contract_entrypoint_b";
 
 // ERC20 contract is in a unique location.
 const ERC20_CAIRO0_CONTRACT_SOURCE_PATH: &str =
@@ -95,6 +99,8 @@ pub enum FeatureContract {
     SecurityTests,
     TestContract(CairoVersion),
     SierraExecutionInfoV1Contract,
+    TestContractEntryPointA,
+    TestContractEntryPointB,
 }
 
 impl FeatureContract {
@@ -108,7 +114,9 @@ impl FeatureContract {
             | Self::ERC20(version) => *version,
             Self::SecurityTests => CairoVersion::Cairo0,
             Self::LegacyTestContract => CairoVersion::Cairo1,
-            Self::SierraExecutionInfoV1Contract => CairoVersion::Native,
+            Self::SierraExecutionInfoV1Contract
+            | Self::TestContractEntryPointA
+            | Self::TestContractEntryPointB => CairoVersion::Native,
         }
     }
 
@@ -141,8 +149,13 @@ impl FeatureContract {
                 | Self::ERC20(_)
         );
 
-        let supports_native =
-            matches!(self, Self::SierraExecutionInfoV1Contract | Self::TestContract(_));
+        let supports_native = matches!(
+            self,
+            Self::SierraExecutionInfoV1Contract
+                | Self::TestContract(_)
+                | Self::TestContractEntryPointA
+                | Self::TestContractEntryPointB
+        );
 
         (supports_legacy as u32) | (supports_cairo1 as u32) << 1 | (supports_native as u32) << 2
     }
@@ -157,7 +170,9 @@ impl FeatureContract {
             | Self::ERC20(v) => *v = version,
             Self::LegacyTestContract
             | Self::SecurityTests
-            | Self::SierraExecutionInfoV1Contract => {
+            | Self::SierraExecutionInfoV1Contract
+            | Self::TestContractEntryPointA
+            | Self::TestContractEntryPointB => {
                 panic!("{self:?} contract has no configurable version.")
             }
         }
@@ -225,6 +240,8 @@ impl FeatureContract {
                 Self::SecurityTests => SECURITY_TEST_CONTRACT_BASE,
                 Self::TestContract(_) => TEST_CONTRACT_BASE,
                 Self::SierraExecutionInfoV1Contract => SIERRA_EXECUTION_INFO_V1_CONTRACT_BASE,
+                Self::TestContractEntryPointA => TEST_CONTRACT_ENTRY_POINT_A_BASE,
+                Self::TestContractEntryPointB => TEST_CONTRACT_ENTRY_POINT_B_BASE,
             }
     }
 
@@ -238,6 +255,8 @@ impl FeatureContract {
             Self::SecurityTests => SECURITY_TEST_CONTRACT_NAME,
             Self::TestContract(_) => TEST_CONTRACT_NAME,
             Self::SierraExecutionInfoV1Contract => EXECUTION_INFO_V1_CONTRACT_NAME,
+            Self::TestContractEntryPointA => TEST_CONTRACT_ENTRY_POINT_A_NAME,
+            Self::TestContractEntryPointB => TEST_CONTRACT_ENTRY_POINT_B_NAME,
             Self::ERC20(_) => {
                 unreachable!()
             }
@@ -306,15 +325,17 @@ impl FeatureContract {
             CairoVersion::Cairo0 => {
                 let extra_arg: Option<String> = match self {
                     // Account contracts require the account_contract flag.
-                    FeatureContract::AccountWithLongValidate(_)
-                    | FeatureContract::AccountWithoutValidations(_)
-                    | FeatureContract::FaultyAccount(_) => Some("--account_contract".into()),
-                    FeatureContract::SecurityTests => Some("--disable_hint_validation".into()),
-                    FeatureContract::Empty(_)
-                    | FeatureContract::TestContract(_)
-                    | FeatureContract::LegacyTestContract
-                    | FeatureContract::SierraExecutionInfoV1Contract => None,
-                    FeatureContract::ERC20(_) => unreachable!(),
+                    Self::AccountWithLongValidate(_)
+                    | Self::AccountWithoutValidations(_)
+                    | Self::FaultyAccount(_) => Some("--account_contract".into()),
+                    Self::SecurityTests => Some("--disable_hint_validation".into()),
+                    Self::Empty(_)
+                    | Self::TestContract(_)
+                    | Self::LegacyTestContract
+                    | Self::SierraExecutionInfoV1Contract
+                    | Self::TestContractEntryPointA
+                    | Self::TestContractEntryPointB => None,
+                    Self::ERC20(_) => unreachable!(),
                 };
                 cairo0_compile(self.get_source_path(), extra_arg, false)
             }

@@ -83,3 +83,9 @@ required-features = ["testing"]
 name = "erc20_tests"
 path = "tests/erc20_tests.rs"
 required-features = ["testing"]
+
+[[test]]
+name = "test_native_contract"
+path = "tests/test_native_contract.rs"
+required-features = ["testing"]
+
