@@ -4,7 +4,7 @@
     "0x6",
     "0x0",
     "0x2",
-    "0x7",
+    "0x8",
     "0x0",
     "0x17a",
     "0x86",
@@ -95,7 +95,7 @@
     "0x800000000000000f00000000000000000000000000000002",
     "0xcc5e86243f861d2d64b08c35db21013e773ac5cf10097946fe0011304886d5",
     "0x36",
-    "0x36e3bf0277e7c1bb9cd72f230a2d616855c6cadbec152c14c3477ef805df7e2",
+    "0x371a38276a14d2475f9072073e9ab9b154a40bb41edce5be7d1ade8ccbeb2e4",
     "0x4275696c74696e436f737473",
     "0x9931c641b913035ae674b400b61a51476d506bbe8bba2ff8a6272790aba9e6",
     "0x35",
@@ -892,7 +892,7 @@
     },
     {
       "type": "event",
-      "name": "sierra_test_contract::sierra_test_contract::TestContract::Event",
+      "name": "test_contract_execution_info_v1::test_contract_execution_info_v1::TestContract::Event",
       "kind": "enum",
       "variants": []
     }

@@ -216,16 +216,16 @@ impl FeatureContract {
     fn get_integer_base(self) -> u32 {
         self.get_cairo_version_bit()
             + match self {
-            Self::AccountWithLongValidate(_) => ACCOUNT_LONG_VALIDATE_BASE,
-            Self::AccountWithoutValidations(_) => ACCOUNT_WITHOUT_VALIDATIONS_BASE,
-            Self::Empty(_) => EMPTY_CONTRACT_BASE,
-            Self::ERC20(_) => ERC20_CONTRACT_BASE,
-            Self::FaultyAccount(_) => FAULTY_ACCOUNT_BASE,
-            Self::LegacyTestContract => LEGACY_CONTRACT_BASE,
-            Self::SecurityTests => SECURITY_TEST_CONTRACT_BASE,
-            Self::TestContract(_) => TEST_CONTRACT_BASE,
-            Self::SierraExecutionInfoV1Contract => SIERRA_EXECUTION_INFO_V1_CONTRACT_BASE,
-        }
+                Self::AccountWithLongValidate(_) => ACCOUNT_LONG_VALIDATE_BASE,
+                Self::AccountWithoutValidations(_) => ACCOUNT_WITHOUT_VALIDATIONS_BASE,
+                Self::Empty(_) => EMPTY_CONTRACT_BASE,
+                Self::ERC20(_) => ERC20_CONTRACT_BASE,
+                Self::FaultyAccount(_) => FAULTY_ACCOUNT_BASE,
+                Self::LegacyTestContract => LEGACY_CONTRACT_BASE,
+                Self::SecurityTests => SECURITY_TEST_CONTRACT_BASE,
+                Self::TestContract(_) => TEST_CONTRACT_BASE,
+                Self::SierraExecutionInfoV1Contract => SIERRA_EXECUTION_INFO_V1_CONTRACT_BASE,
+            }
     }
 
     fn get_non_erc20_base_name(&self) -> &str {
@@ -254,13 +254,14 @@ impl FeatureContract {
                     unreachable!("ERC20 contract is not supported in the native version.")
                 }
             }
-                .into()
+            .into()
         } else {
             format!(
                 "feature_contracts/cairo{}/{}.cairo",
                 match self.cairo_version() {
                     CairoVersion::Cairo0 => "0",
-                    CairoVersion::Cairo1 | CairoVersion::Native => "1",
+                    CairoVersion::Cairo1 => "1",
+                    CairoVersion::Native => "_native",
                 },
                 self.get_non_erc20_base_name()
             )
@@ -277,7 +278,7 @@ impl FeatureContract {
                     unreachable!("ERC20 contract is not supported in the native version.")
                 }
             }
-                .into(),
+            .into(),
             _ => format!(
                 "feature_contracts/cairo{}/compiled/{}{}.json",
                 match self.cairo_version() {
@@ -406,7 +407,7 @@ impl FeatureContract {
         self.get_offset(selector, EntryPointType::Constructor)
     }
 
-    pub fn all_contracts() -> impl Iterator<Item=Self> {
+    pub fn all_contracts() -> impl Iterator<Item = Self> {
         // EnumIter iterates over all variants with Default::default() as the cairo
         // version.
         Self::iter().flat_map(|contract| {
@@ -432,7 +433,7 @@ impl FeatureContract {
         })
     }
 
-    pub fn all_feature_contracts() -> impl Iterator<Item=Self> {
+    pub fn all_feature_contracts() -> impl Iterator<Item = Self> {
         // ERC20 is a special case - not in the feature_contracts directory.
         Self::all_contracts().filter(|contract| !matches!(contract, Self::ERC20(_)))
     }
