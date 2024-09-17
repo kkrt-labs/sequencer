@@ -9,8 +9,8 @@ use crate::test_utils::contracts::FeatureContract;
 use crate::test_utils::initial_test_state::test_state;
 use crate::test_utils::{trivial_external_entry_point_new, CairoVersion, BALANCE};
 
-#[test_case(FeatureContract::TestContract(CairoVersion::Native), 17050926; "Native")]
-#[test_case(FeatureContract::TestContract(CairoVersion::Cairo1), 17022270; "VM")]
+#[test_case(FeatureContract::TestContract(CairoVersion::Native), 17046546; "Native")]
+#[test_case(FeatureContract::TestContract(CairoVersion::Cairo1), 17017890; "VM")]
 fn test_secp256k1(test_contract: FeatureContract, expected_gas: u64) {
     let chain_info = &ChainInfo::create_for_testing();
     let mut state = test_state(chain_info, BALANCE, &[(test_contract, 1)]);
@@ -28,8 +28,8 @@ fn test_secp256k1(test_contract: FeatureContract, expected_gas: u64) {
     );
 }
 
-#[test_case(FeatureContract::TestContract(CairoVersion::Native), 27580060; "Native")]
-#[test_case(FeatureContract::TestContract(CairoVersion::Cairo1), 27570060; "VM")]
+#[test_case(FeatureContract::TestContract(CairoVersion::Native), 27575680; "Native")]
+#[test_case(FeatureContract::TestContract(CairoVersion::Cairo1), 27565680; "VM")]
 fn test_secp256r1(test_contract: FeatureContract, expected_gas: u64) {
     let chain_info = &ChainInfo::create_for_testing();
     let mut state = test_state(chain_info, BALANCE, &[(test_contract, 1)]);
