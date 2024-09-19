@@ -73,6 +73,19 @@ pub enum ContractClass {
     V1Native(NativeContractClassV1),
 }
 
+impl Serialize for ContractClass {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            ContractClass::V0(v0) => v0.serialize(serializer),
+            ContractClass::V1(v1) => v1.serialize(serializer),
+            ContractClass::V1Native(_) => serializer.serialize_none(),
+        }
+    }
+}
+
 
 impl<'de> Deserialize<'de> for ContractClass {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
