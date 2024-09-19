@@ -66,7 +66,7 @@ pub mod test;
 
 pub type ContractClassResult<T> = Result<T, ContractClassError>;
 
-#[derive(Clone, Debug, PartialEq, derive_more::From)]
+#[derive(Clone, Debug, PartialEq, derive_more::From, Eq)]
 pub enum ContractClass {
     V0(ContractClassV0),
     V1(ContractClassV1),
@@ -779,7 +779,7 @@ impl ClassInfo {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct NativeContractClassV1(pub Arc<NativeContractClassV1Inner>);
 impl Deref for NativeContractClassV1 {
     type Target = NativeContractClassV1Inner;
@@ -839,6 +839,8 @@ pub struct NativeContractClassV1Inner {
     sierra_program_hash: starknet_api::hash::StarkHash,
 }
 
+impl Eq for NativeContractClassV1Inner {}
+
 impl NativeContractClassV1Inner {
     /// See [NativeContractClassV1::new]
     fn new(
@@ -889,7 +891,7 @@ impl PartialEq for NativeContractClassV1Inner {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 /// Modelled after [SierraContractEntryPoints]
 /// and enriched with information for the Cairo Native ABI.
 /// See Note [Cairo Native ABI]
@@ -940,7 +942,7 @@ impl Index<EntryPointType> for NativeContractEntryPoints {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 /// Provides a relation between a function in a contract and a compiled contract
 struct NativeEntryPoint {
     /// The selector is the key to find the function in the contract
