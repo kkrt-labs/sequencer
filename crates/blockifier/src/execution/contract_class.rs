@@ -62,7 +62,7 @@ pub mod test;
 
 pub type ContractClassResult<T> = Result<T, ContractClassError>;
 
-#[derive(Clone, Debug, PartialEq, derive_more::From)]
+#[derive(Clone, Debug, PartialEq, derive_more::From, Deserialize)]
 pub enum ContractClass {
     V0(ContractClassV0),
     V1(ContractClassV1),
@@ -194,7 +194,8 @@ impl TryFrom<DeprecatedContractClass> for ContractClassV0 {
 /// Represents a runnable Cario (Cairo 1) Starknet contract class (meaning, the program is runnable
 /// by the VM). We wrap the actual class in an Arc to avoid cloning the program when cloning the
 /// class.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Deserialize)]
+#[serde(try_from = "CasmContractClass")]
 pub struct ContractClassV1(pub Arc<ContractClassV1Inner>);
 impl Deref for ContractClassV1 {
     type Target = ContractClassV1Inner;

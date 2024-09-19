@@ -1718,8 +1718,6 @@ dependencies = [
  "num-traits 0.2.19",
  "p256",
  "sec1",
- "serde",
- "serde_json",
  "sha2",
  "starknet-types-core",
  "stats_alloc",
@@ -1727,7 +1725,6 @@ dependencies = [
  "thiserror",
  "tracing",
  "tracing-subscriber",
- "utf8_iter",
 ]
 
 [[package]]
@@ -1739,6 +1736,7 @@ dependencies = [
  "lazy_static",
  "libc",
  "rand 0.8.5",
+ "starknet-crypto 0.7.2",
  "starknet-curve 0.5.1",
  "starknet-types-core",
 ]
@@ -10348,12 +10346,6 @@ name = "utf-8"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "09cc8ee72d2a9becf2f2febe0205bbed8fc6615b7cb429ad062dc7b7ddd036a9"
-
-[[package]]
-name = "utf8_iter"
-version = "1.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b6c140620e7ffbb22c2dee59cafe6084a59b5ffc27a8859a5f0d494b5d52b6be"
 
 [[package]]
 name = "utf8parse"
