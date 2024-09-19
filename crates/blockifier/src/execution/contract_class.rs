@@ -3,6 +3,7 @@ use std::ops::{Deref, Index};
 use std::sync::Arc;
 
 use cairo_lang_casm;
+use serde::de::Error;
 use cairo_lang_casm::hints::Hint;
 use cairo_lang_sierra::ids::FunctionId;
 use cairo_lang_starknet_classes::casm_contract_class::{CasmContractClass, CasmContractEntryPoint};
@@ -26,7 +27,8 @@ use cairo_vm::types::program::Program;
 use cairo_vm::types::relocatable::MaybeRelocatable;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use itertools::Itertools;
-use serde::de::Error as DeserializationError;
+
+use serde::de::{Error as DeserializationError, Visitor};
 use serde::{Deserialize, Deserializer};
 use starknet_api::core::EntryPointSelector;
 use starknet_api::deprecated_contract_class::{
@@ -62,11 +64,48 @@ pub mod test;
 
 pub type ContractClassResult<T> = Result<T, ContractClassError>;
 
-#[derive(Clone, Debug, PartialEq, derive_more::From, Deserialize)]
+#[derive(Clone, Debug, PartialEq, derive_more::From)]
 pub enum ContractClass {
     V0(ContractClassV0),
     V1(ContractClassV1),
     V1Native(NativeContractClassV1),
+}
+
+impl<'de> Deserialize<'de> for ContractClass {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct ContractClassVisitor;
+
+        impl<'de> Visitor<'de> for ContractClassVisitor {
+            type Value = ContractClass;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("struct ContractClass")
+            }
+
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::MapAccess<'de>,
+            {
+                // Try to deserialize as V0
+                if let Ok(v0) = ContractClassV0::deserialize(serde::de::value::MapAccessDeserializer::new(&mut map)) {
+                    return Ok(ContractClass::V0(v0));
+                }
+
+                // If that fails, try V1
+                if let Ok(v1) = ContractClassV1::deserialize(serde::de::value::MapAccessDeserializer::new(&mut map)) {
+                    return Ok(ContractClass::V1(v1));
+                }
+
+                // If both fail, return an error
+                Err(Error::custom("Failed to deserialize ContractClass"))
+            }
+        }
+
+        deserializer.deserialize_map(ContractClassVisitor)
+    }
 }
 
 impl TryFrom<CasmContractClass> for ContractClass {
