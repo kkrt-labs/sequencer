@@ -4,7 +4,7 @@ use ark_ff::BigInt;
 use cairo_lang_sierra::ids::FunctionId;
 use cairo_lang_starknet_classes::contract_class::ContractEntryPoint;
 use cairo_native::execution_result::ContractExecutionResult;
-use cairo_native::executor::AotNativeExecutor;
+use cairo_native::executor::contract::ContractExecutor;
 use cairo_native::starknet::{ResourceBounds, SyscallResult, TxV2Info, U256};
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use itertools::Itertools;
@@ -37,12 +37,12 @@ pub fn contract_entrypoint_to_entrypoint_selector(
 }
 
 pub fn run_native_executor(
-    native_executor: &AotNativeExecutor,
+    native_executor: &ContractExecutor,
     function_id: &FunctionId,
     call: CallEntryPoint,
     mut syscall_handler: NativeSyscallHandler<'_>,
 ) -> EntryPointExecutionResult<CallInfo> {
-    let execution_result = native_executor.invoke_contract_dynamic(
+    let execution_result = native_executor.run(
         function_id,
         &call.calldata.0,
         Some(call.initial_gas.into()),
@@ -72,15 +72,11 @@ fn create_callinfo(
     syscall_handler: NativeSyscallHandler<'_>,
 ) -> Result<CallInfo, EntryPointExecutionError> {
     let gas_consumed = {
-        // We can use `.unwrap()` directly in both cases because the most significant bit is could
-        // be only 63 here (128 = 64 + 64).
-        let low: u64 = (run_result.remaining_gas & ((1u128 << 64) - 1)).try_into().unwrap();
-        let high: u64 = (run_result.remaining_gas >> 64).try_into().unwrap();
-        if high != 0 {
-            return Err(EntryPointExecutionError::NativeExecutionError {
+        let low: u64 = run_result.remaining_gas.try_into().map_err(|_| {
+            EntryPointExecutionError::NativeExecutionError {
                 info: "Overflow: gas consumed bigger than 64 bit".into(),
-            });
-        }
+            }
+        })?;
         call.initial_gas - low
     };
 

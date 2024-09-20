@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
-use cairo_native::executor::AotNativeExecutor;
+use cairo_native::executor::contract::ContractExecutor;
+use cairo_native::OptLevel;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use serde_json::Value;
 use starknet_api::block::{BlockNumber, BlockTimestamp};
@@ -246,31 +247,14 @@ impl NativeContractClassV1 {
     pub fn try_from_json_string(
         raw_contract_class: &str,
     ) -> Result<Self, Box<dyn std::error::Error>> {
-        // Compile the Sierra Program to native code and loads it into the process'
-        // memory space.
-        fn compile_and_load(
-            sierra_program: &cairo_lang_sierra::program::Program,
-        ) -> Result<AotNativeExecutor, cairo_native::error::Error> {
-            let native_context = cairo_native::context::NativeContext::new();
-            let native_program = native_context.compile(sierra_program)?;
-            Ok(AotNativeExecutor::from_native_module(
-                native_program,
-                cairo_native::OptLevel::Default,
-            ))
-        }
-
         let sierra_contract_class: cairo_lang_starknet_classes::contract_class::ContractClass =
             serde_json::from_str(raw_contract_class)?;
 
-        // todo(rodro): we are having two instances of a sierra program, one it's object form
-        // and another in its felt encoded form. This can be avoided by either:
-        //   1. Having access to the encoding/decoding functions
-        //   2. Refactoring the code on the Cairo mono-repo
-
         let sierra_program = sierra_contract_class.extract_sierra_program()?;
-        let executor = compile_and_load(&sierra_program)?;
+        let executor = ContractExecutor::new(&sierra_program, OptLevel::Default)?;
 
-        Ok(Self::new(executor, sierra_contract_class)?)
+        let contract_executor = Self::new(Arc::new(executor), sierra_contract_class)?;
+        Ok(contract_executor)
     }
 
     pub fn from_file(contract_path: &str) -> Self {
