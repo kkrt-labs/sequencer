@@ -15,7 +15,7 @@ use cairo_lang_starknet_classes::contract_class::{
 };
 use cairo_lang_starknet_classes::NestedIntList;
 use cairo_lang_utils::bigint::BigUintAsHex;
-use cairo_native::executor::contract::ContractExecutor;
+use cairo_native::executor::AotContractExecutor;
 use cairo_vm::serde::deserialize_program::{
     ApTracking,
     FlowTrackingData,
@@ -145,7 +145,7 @@ impl ContractClass {
         match self {
             ContractClass::V0(class) => class.estimate_casm_hash_computation_resources(),
             ContractClass::V1(class) => class.estimate_casm_hash_computation_resources(),
-            ContractClass::V1Native(_) => todo!("sierra estimate casm hash computation resources"),
+            ContractClass::V1Native(_) => Default::default(),
         }
     }
 
@@ -158,7 +158,7 @@ impl ContractClass {
                 panic!("get_visited_segments is not supported for v0 contracts.")
             }
             ContractClass::V1(class) => class.get_visited_segments(visited_pcs),
-            ContractClass::V1Native(_) => todo!("sierra visited segments"),
+            ContractClass::V1Native(_) => Ok(Default::default())
         }
     }
 
@@ -166,7 +166,7 @@ impl ContractClass {
         match self {
             ContractClass::V0(class) => class.bytecode_length(),
             ContractClass::V1(class) => class.bytecode_length(),
-            ContractClass::V1Native(_) => todo!("sierra estimate casm hash computation resources"),
+            ContractClass::V1Native(_) => Default::default(),
         }
     }
 }
@@ -818,7 +818,7 @@ impl NativeContractClassV1 {
     /// executor must be derived from sierra_program which in turn must be derived from
     /// sierra_contract_class.
     pub fn new(
-        executor: Arc<ContractExecutor>,
+        executor: Arc<AotContractExecutor>,
         sierra_contract_class: SierraContractClass,
     ) -> Result<NativeContractClassV1, NativeEntryPointError> {
         let contract = NativeContractClassV1Inner::new(executor, sierra_contract_class)?;
@@ -837,6 +837,7 @@ impl NativeContractClassV1 {
         entrypoints
             .iter()
             .find(|entrypoint| entrypoint.selector == entrypoint_selector)
+            .inspect(|op| println!("{:?}", op)) // Print the op
             .map(|op| &op.function_id)
             .ok_or(EntryPointExecutionError::NativeExecutionError {
                 info: format!("Entrypoint selector {} not found", entrypoint_selector.0),
@@ -846,7 +847,7 @@ impl NativeContractClassV1 {
 
 #[derive(Debug)]
 pub struct NativeContractClassV1Inner {
-    pub executor: Arc<ContractExecutor>,
+    pub executor: Arc<AotContractExecutor>,
     entry_points_by_type: NativeContractEntryPoints,
     // Used for PartialEq
     sierra_program_hash: starknet_api::hash::StarkHash,
@@ -857,10 +858,10 @@ impl Eq for NativeContractClassV1Inner {}
 impl NativeContractClassV1Inner {
     /// See [NativeContractClassV1::new]
     fn new(
-        executor: Arc<ContractExecutor>,
+        executor: Arc<AotContractExecutor>,
         sierra_contract_class: SierraContractClass,
     ) -> Result<Self, NativeEntryPointError> {
-        // This exception should never occur as it was also used to create the ContractExecutor
+        // This exception should never occur as it was also used to create the AotContractExecutor
         let sierra_program =
             sierra_contract_class.extract_sierra_program().expect("can't extract sierra program");
         // Note [Cairo Native ABI]
@@ -869,12 +870,9 @@ impl NativeContractClassV1Inner {
         // function name is what is used by Cairo Native to lookup the function.
         // Therefore it's not enough to know the function index and we need enrich the contract
         // entry point with FunctionIds from SierraProgram.
-        let lookup_fid: HashMap<usize, &FunctionId> =
-            HashMap::from_iter(sierra_program.funcs.iter().map(|fid| {
-                // This exception should never occur as the id is also in [SierraContractClass]
-                let id: usize = fid.id.id.try_into().expect("function id exceeds usize");
-                (id, &fid.id)
-            }));
+        let lookup_fid: HashMap<usize, &FunctionId> = HashMap::from_iter(
+            sierra_program.funcs.iter().enumerate().map(|(idx, func)| (idx, &func.id)),
+        );
 
         Ok(NativeContractClassV1Inner {
             executor,

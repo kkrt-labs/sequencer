@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use cairo_native::executor::contract::ContractExecutor;
+use cairo_native::executor::AotContractExecutor;
 use cairo_native::OptLevel;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use serde_json::Value;
@@ -251,7 +251,7 @@ impl NativeContractClassV1 {
             serde_json::from_str(raw_contract_class)?;
 
         let sierra_program = sierra_contract_class.extract_sierra_program()?;
-        let executor = ContractExecutor::new(&sierra_program, OptLevel::Default)?;
+        let executor = AotContractExecutor::new(&sierra_program, OptLevel::Default)?;
 
         let contract_executor = Self::new(Arc::new(executor), sierra_contract_class)?;
         Ok(contract_executor)

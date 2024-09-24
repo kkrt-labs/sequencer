@@ -32,6 +32,5 @@ pub fn execute_entry_point_call(
 
     println!("Blockifier-Native: running the Native Executor");
     let result = run_native_executor(&contract_class.executor, function_id, call, syscall_handler);
-    println!("Blockifier-Native: Native Executor finished running");
     result
 }
