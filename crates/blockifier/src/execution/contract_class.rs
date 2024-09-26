@@ -837,7 +837,6 @@ impl NativeContractClassV1 {
         entrypoints
             .iter()
             .find(|entrypoint| entrypoint.selector == entrypoint_selector)
-            .inspect(|op| println!("{:?}", op)) // Print the op
             .map(|op| &op.function_id)
             .ok_or(EntryPointExecutionError::NativeExecutionError {
                 info: format!("Entrypoint selector {} not found", entrypoint_selector.0),
