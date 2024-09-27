@@ -932,7 +932,7 @@ where
         let lhs: Affine<Curve> = p0.into();
         let rhs: Affine<Curve> = p1.into();
         let result: Projective<Curve> = lhs + rhs;
-        let result: Affine<Curve> = result.into();
+        let result: Affine<Curve> = Affine::from(result);
         result.into()
     }
 
@@ -1036,6 +1036,9 @@ where
     Curve::BaseField: From<num_bigint::BigUint>,
 {
     fn from(p: Secp256Point<Curve>) -> Self {
+        if p.x.lo == 0 && p.x.hi == 0 && p.y.lo == 0 && p.y.hi == 0 {
+            return Affine::<Curve>::identity();
+        }
         Affine::<Curve>::new(u256_to_biguint(p.x).into(), u256_to_biguint(p.y).into())
     }
 }
