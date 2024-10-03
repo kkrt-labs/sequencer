@@ -1700,7 +1700,7 @@ dependencies = [
 [[package]]
 name = "cairo-native"
 version = "0.2.0-alpha.2"
-source = "git+https://github.com/lambdaclass/cairo_native?branch=fix-clone-drop-for-enum-structs#cffd8434ac5d7b2d8bcb2cb38c5ffdc6aeb9d814"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=79a8dcffe1e562e80198425e7c9f3a328c783947#79a8dcffe1e562e80198425e7c9f3a328c783947"
 dependencies = [
  "anyhow",
  "aquamarine",
@@ -1752,7 +1752,7 @@ dependencies = [
 [[package]]
 name = "cairo-native-runtime"
 version = "0.2.0-alpha.2"
-source = "git+https://github.com/lambdaclass/cairo_native?branch=fix-clone-drop-for-enum-structs#cffd8434ac5d7b2d8bcb2cb38c5ffdc6aeb9d814"
+source = "git+https://github.com/lambdaclass/cairo_native?rev=79a8dcffe1e562e80198425e7c9f3a328c783947#79a8dcffe1e562e80198425e7c9f3a328c783947"
 dependencies = [
  "cairo-lang-sierra-gas",
  "itertools 0.13.0",
