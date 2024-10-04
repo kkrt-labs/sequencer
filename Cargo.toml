@@ -80,7 +80,7 @@ cairo-lang-sierra = "2.8.2"
 cairo-lang-sierra-to-casm = "2.8.2"
 cairo-lang-starknet-classes = "2.8.2"
 cairo-lang-utils = "2.8.2"
-cairo-native = { git = "https://github.com/lambdaclass/cairo_native", rev="79a8dcffe1e562e80198425e7c9f3a328c783947"}
+cairo-native = { git = "https://github.com/lambdaclass/cairo_native", branch="fix-array-get-drop"}
 cairo-vm = "1.0.1"
 camelpaste = "0.1.0"
 chrono = "0.4.26"
