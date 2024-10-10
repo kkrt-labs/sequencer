@@ -997,10 +997,9 @@ fn maybe_affine<Curve: SWCurveConfig>(
 /// With this data structure and its From instances we
 /// tie a hint processor to the corresponding Secp256k1 or Secp256r1 point.
 /// Thereby making the hint processor operations generic over the Secp256 point.
-struct Secp256Point<Config> {
-    x: U256,
-    y: U256,
-    _phantom: PhantomData<Config>,
+enum Secp256Point<Config> {
+    Infinity,
+    Point { x: U256, y: U256, _phantom: PhantomData<Config> },
 }
 
 use std::convert::From;
@@ -1009,25 +1008,47 @@ use crate::transaction::transaction_utils::update_remaining_gas;
 
 impl From<Secp256Point<ark_secp256k1::Config>> for Secp256k1Point {
     fn from(p: Secp256Point<ark_secp256k1::Config>) -> Self {
-        Secp256k1Point { x: p.x, y: p.y }
+        match p {
+            Secp256Point::Infinity => Secp256k1Point {
+                x: U256 { lo: 0, hi: 0 },
+                y: U256 { lo: 0, hi: 0 },
+                is_infinity: true,
+            },
+            Secp256Point::Point { x, y, _phantom } => Secp256k1Point { x, y, is_infinity: false },
+        }
     }
 }
 
 impl From<Secp256Point<ark_secp256r1::Config>> for Secp256r1Point {
     fn from(p: Secp256Point<ark_secp256r1::Config>) -> Self {
-        Secp256r1Point { x: p.x, y: p.y }
+        match p {
+            Secp256Point::Infinity => Secp256r1Point {
+                x: U256 { lo: 0, hi: 0 },
+                y: U256 { lo: 0, hi: 0 },
+                is_infinity: true,
+            },
+            Secp256Point::Point { x, y, _phantom } => Secp256r1Point { x, y, is_infinity: false },
+        }
     }
 }
 
 impl From<Secp256k1Point> for Secp256Point<ark_secp256k1::Config> {
     fn from(p: Secp256k1Point) -> Self {
-        Self { x: p.x, y: p.y, _phantom: Default::default() }
+        if p.is_infinity {
+            Secp256Point::Infinity
+        } else {
+            Secp256Point::Point { x: p.x, y: p.y, _phantom: Default::default() }
+        }
     }
 }
 
 impl From<Secp256r1Point> for Secp256Point<ark_secp256r1::Config> {
     fn from(p: Secp256r1Point) -> Self {
-        Self { x: p.x, y: p.y, _phantom: Default::default() }
+        if p.is_infinity {
+            Secp256Point::Infinity
+        } else {
+            Secp256Point::Point { x: p.x, y: p.y, _phantom: Default::default() }
+        }
     }
 }
 
@@ -1036,10 +1057,12 @@ where
     Curve::BaseField: From<num_bigint::BigUint>,
 {
     fn from(p: Secp256Point<Curve>) -> Self {
-        if p.x.lo == 0 && p.x.hi == 0 && p.y.lo == 0 && p.y.hi == 0 {
-            return Affine::<Curve>::identity();
+        match p {
+            Secp256Point::Infinity => Affine::<Curve>::identity(),
+            Secp256Point::Point { x, y, _phantom } => {
+                Affine::<Curve>::new(u256_to_biguint(x).into(), u256_to_biguint(y).into())
+            }
         }
-        Affine::<Curve>::new(u256_to_biguint(p.x).into(), u256_to_biguint(p.y).into())
     }
 }
 
@@ -1048,11 +1071,15 @@ where
     ark_ff::BigInt<4>: From<<Curve>::BaseField>,
 {
     fn from(point: Affine<Curve>) -> Self {
-        // Here /into/ must be used, accessing the BigInt via .0 will lead to an
-        // transformation being missed.
-        let x = big4int_to_u256(point.x.into());
-        let y = big4int_to_u256(point.y.into());
+        if point.infinity {
+            Self::Infinity
+        } else {
+            // Here /into/ must be used, accessing the BigInt via .0 will lead to an
+            // transformation being missed.
+            let x = big4int_to_u256(point.x.into());
+            let y = big4int_to_u256(point.y.into());
 
-        Self { x, y, _phantom: Default::default() }
+            Self::Point { x, y, _phantom: Default::default() }
+        }
     }
 }
