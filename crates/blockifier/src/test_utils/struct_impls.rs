@@ -251,7 +251,7 @@ impl NativeContractClassV1 {
             serde_json::from_str(raw_contract_class)?;
 
         let sierra_program = sierra_contract_class.extract_sierra_program()?;
-        let executor = AotContractExecutor::new(&sierra_program, OptLevel::Default)?;
+        let executor = AotContractExecutor::new(&sierra_program, &sierra_contract_class.entry_points_by_type, OptLevel::Default)?;
 
         let contract_executor = Self::new(Arc::new(executor), sierra_contract_class)?;
         Ok(contract_executor)

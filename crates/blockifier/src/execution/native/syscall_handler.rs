@@ -125,7 +125,7 @@ impl<'state> NativeSyscallHandler<'state> {
     pub fn execute_inner_call(
         &mut self,
         entry_point: CallEntryPoint,
-        remaining_gas: &mut u128,
+        remaining_gas: &mut u64,
     ) -> SyscallResult<Retdata> {
         let call_info = entry_point
             .execute(self.state, self.execution_resources, self.execution_context)
@@ -146,7 +146,7 @@ impl<'state> NativeSyscallHandler<'state> {
         Ok(retdata)
     }
 
-    pub fn update_remaining_gas(&mut self, remaining_gas: &mut u128, call_info: &CallInfo) {
+    pub fn update_remaining_gas(&mut self, remaining_gas: &mut u64, call_info: &CallInfo) {
         // create a new variable with converted type
         let mut remaining_gas_u64 = u64::try_from(*remaining_gas).unwrap();
 
@@ -154,7 +154,7 @@ impl<'state> NativeSyscallHandler<'state> {
         update_remaining_gas(&mut remaining_gas_u64, call_info);
 
         // change the remaining gas value
-        *remaining_gas = u128::from(remaining_gas_u64);
+        *remaining_gas = remaining_gas_u64;
     }
 
     pub fn increment_syscall_count_by(&mut self, selector: &SyscallSelector, n: usize) {
@@ -171,7 +171,7 @@ impl<'state> NativeSyscallHandler<'state> {
     // syscalls are called directly, so we need to implement this logic here
     pub fn pre_execute_syscall(
         &mut self,
-        remaining_gas: &mut u128,
+        remaining_gas: &mut u64,
         syscall_selector: SyscallSelector,
         syscall_gas_cost: u64,
     ) -> SyscallResult<()> {
@@ -183,7 +183,7 @@ impl<'state> NativeSyscallHandler<'state> {
 
         // Refund `SYSCALL_BASE_GAS_COST` as it was pre-charged.
         let required_gas =
-            u128::from(syscall_gas_cost - self.execution_context.gas_costs().syscall_base_gas_cost);
+            u64::from(syscall_gas_cost - self.execution_context.gas_costs().syscall_base_gas_cost);
 
         if *remaining_gas < required_gas {
             //  Out of gas failure.
@@ -197,10 +197,20 @@ impl<'state> NativeSyscallHandler<'state> {
 }
 
 impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
+
+    fn get_class_hash_at(
+            &mut self,
+            _contract_address: Felt,
+            _remaining_gas: &mut u64,
+        ) -> SyscallResult<Felt> {
+        panic!("get_class_hash_at is not implemented");
+    }
+
+
     fn get_block_hash(
         &mut self,
         block_number: u64,
-        remaining_gas: &mut u128,
+        remaining_gas: &mut u64,
     ) -> SyscallResult<Felt> {
         self.pre_execute_syscall(
             remaining_gas,
@@ -246,7 +256,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
         }
     }
 
-    fn get_execution_info(&mut self, remaining_gas: &mut u128) -> SyscallResult<ExecutionInfo> {
+    fn get_execution_info(&mut self, remaining_gas: &mut u64) -> SyscallResult<ExecutionInfo> {
         self.pre_execute_syscall(
             remaining_gas,
             SyscallSelector::GetExecutionInfo,
@@ -312,7 +322,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
 
     fn get_execution_info_v2(
         &mut self,
-        remaining_gas: &mut u128,
+        remaining_gas: &mut u64,
     ) -> SyscallResult<ExecutionInfoV2> {
         self.pre_execute_syscall(
             remaining_gas,
@@ -401,7 +411,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
         contract_address_salt: Felt,
         calldata: &[Felt],
         deploy_from_zero: bool,
-        remaining_gas: &mut u128,
+        remaining_gas: &mut u64,
     ) -> SyscallResult<(Felt, Vec<Felt>)> {
         self.pre_execute_syscall(
             remaining_gas,
@@ -464,7 +474,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
         Ok((contract_address_felt, return_data))
     }
 
-    fn replace_class(&mut self, class_hash: Felt, remaining_gas: &mut u128) -> SyscallResult<()> {
+    fn replace_class(&mut self, class_hash: Felt, remaining_gas: &mut u64) -> SyscallResult<()> {
         self.pre_execute_syscall(
             remaining_gas,
             SyscallSelector::ReplaceClass,
@@ -496,7 +506,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
         class_hash: Felt,
         function_selector: Felt,
         calldata: &[Felt],
-        remaining_gas: &mut u128,
+        remaining_gas: &mut u64,
     ) -> SyscallResult<Vec<Felt>> {
         self.pre_execute_syscall(
             remaining_gas,
@@ -529,7 +539,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
         address: Felt,
         entry_point_selector: Felt,
         calldata: &[Felt],
-        remaining_gas: &mut u128,
+        remaining_gas: &mut u64,
     ) -> SyscallResult<Vec<Felt>> {
         self.pre_execute_syscall(
             remaining_gas,
@@ -572,7 +582,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
         &mut self,
         _address_domain: u32,
         address: Felt,
-        remaining_gas: &mut u128,
+        remaining_gas: &mut u64,
     ) -> SyscallResult<Felt> {
         self.pre_execute_syscall(
             remaining_gas,
@@ -598,7 +608,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
         _address_domain: u32,
         address: Felt,
         value: Felt,
-        remaining_gas: &mut u128,
+        remaining_gas: &mut u64,
     ) -> SyscallResult<()> {
         self.pre_execute_syscall(
             remaining_gas,
@@ -621,7 +631,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
         &mut self,
         keys: &[Felt],
         data: &[Felt],
-        remaining_gas: &mut u128,
+        remaining_gas: &mut u64,
     ) -> SyscallResult<()> {
         self.pre_execute_syscall(
             remaining_gas,
@@ -652,7 +662,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
         &mut self,
         to_address: Felt,
         payload: &[Felt],
-        remaining_gas: &mut u128,
+        remaining_gas: &mut u64,
     ) -> SyscallResult<()> {
         self.pre_execute_syscall(
             remaining_gas,
@@ -676,7 +686,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
         Ok(())
     }
 
-    fn keccak(&mut self, input: &[u64], remaining_gas: &mut u128) -> SyscallResult<U256> {
+    fn keccak(&mut self, input: &[u64], remaining_gas: &mut u64) -> SyscallResult<U256> {
         self.pre_execute_syscall(
             remaining_gas,
             SyscallSelector::Keccak,
@@ -696,7 +706,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
         // TODO(Ori, 1/2/2024): Write an indicative expect message explaining why the conversion
         // works.
         let n_rounds_as_u64 = u64::try_from(n_rounds).expect("Failed to convert usize to u64.");
-        let gas_cost = u128::from(
+        let gas_cost = u64::from(
             n_rounds_as_u64 * self.execution_context.gas_costs().keccak_round_cost_gas_cost,
         );
 
@@ -729,7 +739,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
         &mut self,
         x: U256,
         y: U256,
-        remaining_gas: &mut u128,
+        remaining_gas: &mut u64,
     ) -> SyscallResult<Option<Secp256k1Point>> {
         self.pre_execute_syscall(
             remaining_gas,
@@ -744,7 +754,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
         &mut self,
         p0: Secp256k1Point,
         p1: Secp256k1Point,
-        remaining_gas: &mut u128,
+        remaining_gas: &mut u64,
     ) -> SyscallResult<Secp256k1Point> {
         self.pre_execute_syscall(
             remaining_gas,
@@ -759,7 +769,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
         &mut self,
         p: Secp256k1Point,
         m: U256,
-        remaining_gas: &mut u128,
+        remaining_gas: &mut u64,
     ) -> SyscallResult<Secp256k1Point> {
         self.pre_execute_syscall(
             remaining_gas,
@@ -774,7 +784,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
         &mut self,
         x: U256,
         y_parity: bool,
-        remaining_gas: &mut u128,
+        remaining_gas: &mut u64,
     ) -> SyscallResult<Option<Secp256k1Point>> {
         self.pre_execute_syscall(
             remaining_gas,
@@ -788,7 +798,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
     fn secp256k1_get_xy(
         &mut self,
         p: Secp256k1Point,
-        remaining_gas: &mut u128,
+        remaining_gas: &mut u64,
     ) -> SyscallResult<(U256, U256)> {
         self.pre_execute_syscall(
             remaining_gas,
@@ -803,7 +813,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
         &mut self,
         x: U256,
         y: U256,
-        remaining_gas: &mut u128,
+        remaining_gas: &mut u64,
     ) -> SyscallResult<Option<Secp256r1Point>> {
         self.pre_execute_syscall(
             remaining_gas,
@@ -818,7 +828,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
         &mut self,
         p0: Secp256r1Point,
         p1: Secp256r1Point,
-        remaining_gas: &mut u128,
+        remaining_gas: &mut u64,
     ) -> SyscallResult<Secp256r1Point> {
         self.pre_execute_syscall(
             remaining_gas,
@@ -833,7 +843,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
         &mut self,
         p: Secp256r1Point,
         m: U256,
-        remaining_gas: &mut u128,
+        remaining_gas: &mut u64,
     ) -> SyscallResult<Secp256r1Point> {
         self.pre_execute_syscall(
             remaining_gas,
@@ -848,7 +858,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
         &mut self,
         x: U256,
         y_parity: bool,
-        remaining_gas: &mut u128,
+        remaining_gas: &mut u64,
     ) -> SyscallResult<Option<Secp256r1Point>> {
         self.pre_execute_syscall(
             remaining_gas,
@@ -862,7 +872,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
     fn secp256r1_get_xy(
         &mut self,
         p: Secp256r1Point,
-        remaining_gas: &mut u128,
+        remaining_gas: &mut u64,
     ) -> SyscallResult<(U256, U256)> {
         self.pre_execute_syscall(
             remaining_gas,
@@ -877,7 +887,7 @@ impl<'state> StarknetSyscallHandler for &mut NativeSyscallHandler<'state> {
         &mut self,
         prev_state: &mut [u32; 8],
         current_block: &[u32; 16],
-        remaining_gas: &mut u128,
+        remaining_gas: &mut u64,
     ) -> Result<(), Vec<Felt>> {
         const SHA256_STATE_SIZE: usize = 8;
 

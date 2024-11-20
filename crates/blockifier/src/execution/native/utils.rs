@@ -38,14 +38,15 @@ pub fn contract_entrypoint_to_entrypoint_selector(
 
 pub fn run_native_executor(
     native_executor: &AotContractExecutor,
-    function_id: &FunctionId,
+    _function_id: &FunctionId,
     call: CallEntryPoint,
     mut syscall_handler: NativeSyscallHandler<'_>,
 ) -> EntryPointExecutionResult<CallInfo> {
     let execution_result = native_executor.run(
-        function_id,
+        call.entry_point_selector.0,
         &call.calldata.0,
         Some(call.initial_gas.into()),
+        Some(Default::default()),
         &mut syscall_handler,
     );
 
