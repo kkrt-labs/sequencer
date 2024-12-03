@@ -2736,13 +2736,13 @@
     }
   },
   "entry_points_by_type": {
-    "L1_HANDLER": [],
-    "CONSTRUCTOR": [],
     "EXTERNAL": [
       {
         "selector": "0x3b82f69851fa1625b367ea6c116252a84257da483dcec4d4e4bc270eb5c70a7",
         "offset": "0x179"
       }
-    ]
+    ],
+    "L1_HANDLER": [],
+    "CONSTRUCTOR": []
   }
 }

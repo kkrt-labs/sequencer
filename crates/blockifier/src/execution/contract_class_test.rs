@@ -7,6 +7,7 @@ use cairo_lang_starknet_classes::NestedIntList;
 use rstest::rstest;
 
 use crate::execution::contract_class::{CompiledClassV1, CompiledClassV0, CompiledClassV1Inner};
+use crate::test_utils::struct_impls::LoadContractFromFile;
 use crate::transaction::errors::TransactionExecutionError;
 
 #[rstest]
@@ -44,6 +45,7 @@ fn test_get_visited_segments() {
         TransactionExecutionError::InvalidSegmentStructure(907, 807)
     );
 }
+
 
 #[test]
 fn test_deserialization_of_contract_class_v_0() {

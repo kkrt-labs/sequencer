@@ -1501,6 +1501,7 @@ dependencies = [
  "cairo-lang-casm",
  "cairo-lang-runner",
  "cairo-lang-starknet-classes",
+ "cairo-lang-utils",
  "cairo-native",
  "cairo-vm",
  "criterion",
