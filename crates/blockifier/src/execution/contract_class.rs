@@ -511,7 +511,7 @@ impl TryInto<CasmContractClass> for &CompiledClassV1 {
                     .builtins
                     .clone()
                     .into_iter()
-                    .map(|x| x.to_string().into())
+                    .map(|x| x.to_string())
                     .collect(),
             })
             .collect();
@@ -528,7 +528,7 @@ impl TryInto<CasmContractClass> for &CompiledClassV1 {
                     .builtins
                     .clone()
                     .into_iter()
-                    .map(|x| x.to_string().into())
+                    .map(|x| x.to_string())
                     .collect(),
             })
             .collect();
@@ -545,7 +545,7 @@ impl TryInto<CasmContractClass> for &CompiledClassV1 {
                     .builtins
                     .clone()
                     .into_iter()
-                    .map(|x| x.to_string().into())
+                    .map(|x| x.to_string())
                     .collect(),
             })
             .collect();
@@ -682,10 +682,10 @@ fn convert_entry_points_v1(external: &[CasmContractEntryPoint]) -> Vec<EntryPoin
             builtins: ep
                 .builtins
                 .iter()
-                .map(|builtin| match BuiltinName::from_str(&builtin) {
+                .map(|builtin| match BuiltinName::from_str(builtin) {
                     Some(builtin) => builtin,
                     None => {
-                        BuiltinName::from_str_with_suffix(&builtin).expect("Unrecognized builtin.")
+                        BuiltinName::from_str_with_suffix(builtin).expect("Unrecognized builtin.")
                     }
                 })
                 .collect(),
