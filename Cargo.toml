@@ -104,7 +104,7 @@ cairo-lang-starknet-classes = "2.9.0-dev.0"
 cairo-lang-utils = "2.9.0-dev.0"
 # Important: when updated, make sure to update the cairo-native submodule as well.
 cairo-native = "0.2.4"
-cairo-vm = "=1.0.1"
+cairo-vm = { version = "1.0.1", features = ["test_utils"] }
 camelpaste = "0.1.0"
 chrono = "0.4.26"
 clap = "4.5.4"

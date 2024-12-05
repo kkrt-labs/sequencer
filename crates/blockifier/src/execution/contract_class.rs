@@ -18,9 +18,11 @@ use cairo_vm::types::program::Program;
 use cairo_vm::types::relocatable::MaybeRelocatable;
 use cairo_vm::vm::runners::cairo_runner::ExecutionResources;
 use itertools::Itertools;
+use num_traits::Num;
+
 use semver::Version;
 use serde::de::Error as DeserializationError;
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use starknet_api::contract_class::{ContractClass, EntryPointType};
 use starknet_api::core::EntryPointSelector;
 use starknet_api::deprecated_contract_class::{
@@ -32,10 +34,11 @@ use starknet_api::deprecated_contract_class::{
 use starknet_api::transaction::fields::GasVectorComputationMode;
 use starknet_types_core::felt::Felt;
 
-use crate::abi::constants::{self};
+use super::execution_utils::{sn_api_to_cairo_vm_program, cairo_vm_to_sn_api_program, poseidon_hash_many_cost};
+use crate::abi::constants;
 use crate::execution::entry_point::CallEntryPoint;
 use crate::execution::errors::PreExecutionError;
-use crate::execution::execution_utils::{poseidon_hash_many_cost, sn_api_to_cairo_vm_program};
+
 #[cfg(feature = "cairo_native")]
 use crate::execution::native::contract_class::NativeCompiledClassV1;
 use crate::transaction::errors::TransactionExecutionError;
@@ -60,7 +63,7 @@ pub enum TrackedResource {
 
 /// Represents a runnable Starknet compiled class.
 /// Meaning, the program is runnable by the VM (or natively).
-#[derive(Clone, Debug, Eq, PartialEq, derive_more::From)]
+#[derive(Clone, Debug, Eq, PartialEq, derive_more::From, Serialize, Deserialize)]
 pub enum RunnableCompiledClass {
     V0(CompiledClassV0),
     V1(CompiledClassV1),
@@ -156,7 +159,7 @@ impl RunnableCompiledClass {
 /// class.
 // Note: when deserializing from a SN API class JSON string, the ABI field is ignored
 // by serde, since it is not required for execution.
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
 pub struct CompiledClassV0(pub Arc<CompiledClassV0Inner>);
 impl Deref for CompiledClassV0 {
     type Target = CompiledClassV0Inner;
@@ -208,9 +211,9 @@ impl CompiledClassV0 {
     }
 }
 
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, Eq, PartialEq)]
 pub struct CompiledClassV0Inner {
-    #[serde(deserialize_with = "deserialize_program")]
+    #[serde(deserialize_with = "deserialize_program", serialize_with = "serialize_program")]
     pub program: Program,
     pub entry_points_by_type: HashMap<EntryPointType, Vec<EntryPointV0>>,
 }
@@ -232,12 +235,45 @@ impl TryFrom<DeprecatedContractClass> for CompiledClassV0 {
 /// by the VM). We wrap the actual class in an Arc to avoid cloning the program when cloning the
 /// class.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct CompiledClassV1(pub Arc<ContractClassV1Inner>);
+pub struct CompiledClassV1(pub Arc<CompiledClassV1Inner>);
 impl Deref for CompiledClassV1 {
-    type Target = ContractClassV1Inner;
+    type Target = CompiledClassV1Inner;
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+impl Serialize for CompiledClassV1 {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        // Convert the CompiledClassV1 instance to CasmContractClass
+        let casm_contract_class: CasmContractClass = self
+            .try_into()
+            .map_err(|err: ProgramError| serde::ser::Error::custom(err.to_string()))?;
+
+        // Serialize the JSON string to bytes
+        casm_contract_class.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for CompiledClassV1 {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // Deserialize into a JSON value
+        let json_value: serde_json::Value = Deserialize::deserialize(deserializer)?;
+
+        // Convert into a JSON string
+        let json_string = serde_json::to_string(&json_value)
+            .map_err(|err| DeserializationError::custom(err.to_string()))?;
+
+        // Use try_from_json_string to deserialize into CompiledClassV1
+        CompiledClassV1::try_from_json_string(&json_string)
+            .map_err(|err| DeserializationError::custom(err.to_string()))
     }
 }
 
@@ -387,7 +423,7 @@ fn get_visited_segments(
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct ContractClassV1Inner {
+pub struct CompiledClassV1Inner {
     pub program: Program,
     pub entry_points_by_type: EntryPointsByType<EntryPointV1>,
     pub hints: HashMap<String, Hint>,
@@ -405,6 +441,131 @@ pub struct EntryPointV1 {
 impl EntryPointV1 {
     pub fn pc(&self) -> usize {
         self.offset.0
+    }
+}
+
+// Implementation of the TryInto trait to convert a reference of CompiledClassV1 into
+// CasmContractClass.
+impl TryInto<CasmContractClass> for &CompiledClassV1 {
+    // Definition of the error type that can be returned during the conversion.
+    type Error = ProgramError;
+
+    // Implementation of the try_into function which performs the conversion.
+    fn try_into(self) -> Result<CasmContractClass, Self::Error> {
+        // Converting the program data into a vector of BigUintAsHex.
+        let bytecode: Vec<cairo_lang_utils::bigint::BigUintAsHex> = self
+            .program
+            .iter_data()
+            .map(|x| cairo_lang_utils::bigint::BigUintAsHex {
+                value: x.get_int_ref().unwrap().to_biguint(),
+            })
+            .collect();
+
+        // Serialize the Program object to JSON bytes.
+        let serialized_program = self.program.serialize()?;
+        // Deserialize the JSON bytes into a serde_json::Value.
+        let json_value: serde_json::Value = serde_json::from_slice(&serialized_program)?;
+
+        // Extract the hints from the JSON value.
+        let hints = json_value.get("hints").ok_or_else(|| {
+            ProgramError::Parse(serde::ser::Error::custom("failed to parse hints"))
+        })?;
+
+        // Transform the hints into a vector of tuples (usize, Vec<Hint>).
+        let hints: Vec<(usize, Vec<Hint>)> = hints
+            .as_object() // Convert to JSON object.
+            .unwrap()
+            .iter()
+            .map(|(key, value)| {
+                // Transform each hint value into a Vec<Hint>.
+                let hints: Vec<Hint> = value
+                    .as_array() // Convert to JSON array.
+                    .unwrap()
+                    .iter()
+                    .map(|hint_params| {
+                        // Extract the "code" parameter and convert to a string.
+                        let hint_param_code = hint_params.get("code").unwrap().clone();
+                        let hint_string = hint_param_code.as_str().expect("failed to parse hint as string");
+
+                        // Retrieve the hint from the self.hints map.
+                        self.hints.get(hint_string).expect("failed to get hint").clone()
+                    })
+                    .collect();
+                // Convert the key to usize and create a tuple (usize, Vec<Hint>).
+                (key.parse().unwrap(), hints)
+            })
+            .collect();
+
+        // Define the bytecode segment lengths
+        let bytecode_segment_lengths = Some(self.bytecode_segment_lengths.clone());
+
+        // Transform the entry points of type Constructor into CasmContractEntryPoint.
+        let constructor = self
+            .entry_points_by_type
+            .constructor
+            .iter()
+            .map(|constructor| CasmContractEntryPoint {
+                selector: num_bigint::BigUint::from_bytes_be(&constructor.selector.0.to_bytes_be()),
+                offset: constructor.offset.0,
+                builtins: constructor
+                    .builtins
+                    .clone()
+                    .into_iter()
+                    .map(|x| x.to_string())
+                    .collect(),
+            })
+            .collect();
+
+        // Transform the entry points of type External into CasmContractEntryPoint.
+        let external = self
+            .entry_points_by_type
+            .external
+            .iter()
+            .map(|external| CasmContractEntryPoint {
+                selector: num_bigint::BigUint::from_bytes_be(&external.selector.0.to_bytes_be()),
+                offset: external.offset.0,
+                builtins: external
+                    .builtins
+                    .clone()
+                    .into_iter()
+                    .map(|x| x.to_string())
+                    .collect(),
+            })
+            .collect();
+
+        // Transform the entry points of type L1Handler into CasmContractEntryPoint.
+        let l1_handler = self
+            .entry_points_by_type
+            .l1_handler
+            .iter()
+            .map(|l1_handler| CasmContractEntryPoint {
+                selector: num_bigint::BigUint::from_bytes_be(&l1_handler.selector.0.to_bytes_be()),
+                offset: l1_handler.offset.0,
+                builtins: l1_handler
+                    .builtins
+                    .clone()
+                    .into_iter()
+                    .map(|x| x.to_string())
+                    .collect(),
+            })
+            .collect();
+
+        // Construct the CasmContractClass from the extracted and transformed data.
+        Ok(CasmContractClass {
+            prime: num_bigint::BigUint::from_str_radix(&self.program.prime()[2..], 16)
+                .expect("failed to parse prime"),
+            compiler_version: self.compiler_version.0.to_string(),
+            bytecode,
+            bytecode_segment_lengths,
+            hints,
+            pythonic_hints: None,
+            entry_points_by_type:
+                cairo_lang_starknet_classes::casm_contract_class::CasmContractEntryPoints {
+                    constructor,
+                    external,
+                    l1_handler,
+                },
+        })
     }
 }
 
@@ -467,7 +628,7 @@ impl TryFrom<CasmContractClass> for CompiledClassV1 {
             Version::parse(&class.compiler_version)
                 .unwrap_or_else(|_| panic!("Invalid version: '{}'", class.compiler_version)),
         );
-        Ok(CompiledClassV1(Arc::new(ContractClassV1Inner {
+        Ok(CompiledClassV1(Arc::new(CompiledClassV1Inner {
             program,
             entry_points_by_type,
             hints: string_to_hint,
@@ -486,6 +647,16 @@ pub fn deserialize_program<'de, D: Deserializer<'de>>(
     let deprecated_program = DeprecatedProgram::deserialize(deserializer)?;
     sn_api_to_cairo_vm_program(deprecated_program)
         .map_err(|err| DeserializationError::custom(err.to_string()))
+}
+
+/// Converts the program type from Cairo VM into a SN API-compatible type.
+pub fn serialize_program<S: Serializer>(
+    program: &Program,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    let deprecated_program = cairo_vm_to_sn_api_program(program.clone())
+        .map_err(|err| serde::ser::Error::custom(err.to_string()))?;
+    deprecated_program.serialize(serializer)
 }
 
 // V1 utilities.
@@ -511,7 +682,12 @@ fn convert_entry_points_v1(external: &[CasmContractEntryPoint]) -> Vec<EntryPoin
             builtins: ep
                 .builtins
                 .iter()
-                .map(|builtin| BuiltinName::from_str(builtin).expect("Unrecognized builtin."))
+                .map(|builtin| match BuiltinName::from_str(builtin) {
+                    Some(builtin) => builtin,
+                    None => {
+                        BuiltinName::from_str_with_suffix(builtin).expect("Unrecognized builtin.")
+                    }
+                })
                 .collect(),
         })
         .collect()
